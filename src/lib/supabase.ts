@@ -1,9 +1,39 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const SUPABASE_CONFIGURED = Boolean(supabaseUrl && supabaseAnonKey);
+
+let _supabase: ReturnType<typeof createClient> | any;
+
+if (SUPABASE_CONFIGURED) {
+  _supabase = createClient(supabaseUrl!, supabaseAnonKey!);
+} else {
+  // Provide a safe proxy that surfaces a clear error when used in the app
+  const errMsg =
+    'Supabase not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your environment (these are injected at build time by Vite).';
+
+  // Log once so deploys show the real problem in browser console
+  if (typeof window !== 'undefined') {
+    // eslint-disable-next-line no-console
+    console.error(errMsg);
+  } else {
+    // build/server-side logging
+    // eslint-disable-next-line no-console
+    console.error('[supabase] ' + errMsg);
+  }
+
+  const handler: ProxyHandler<any> = {
+    get() {
+      return () => Promise.reject(new Error(errMsg));
+    },
+  };
+
+  _supabase = new Proxy({}, handler);
+}
+
+export const supabase = _supabase;
 
 export type Profile = {
   id: string;

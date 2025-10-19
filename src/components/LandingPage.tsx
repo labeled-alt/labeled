@@ -1,24 +1,168 @@
-import { Database, Tag, Download, ArrowRight, Upload, Sparkles, CheckCircle2, Zap } from 'lucide-react';
+import React from 'react';
+import { Database, Download, Tag, ArrowRight, Upload, Sparkles, CheckCircle2, Zap } from 'lucide-react';
+import Logo from './Logo';
+
+// Simple Typewriter component: types the provided text one char at a time with a blinking caret.
+function Typewriter({ text, speed = 40 }: { text: string; speed?: number }) {
+  const [pos, setPos] = React.useState(0);
+  const [visible, setVisible] = React.useState(true);
+
+  React.useEffect(() => {
+    const t = setInterval(() => setVisible(v => !v), 500);
+    return () => clearInterval(t);
+  }, []);
+
+  React.useEffect(() => {
+    if (pos >= text.length) return;
+    const id = window.setTimeout(() => setPos(p => Math.min(text.length, p + 1)), speed);
+    return () => clearTimeout(id);
+  }, [pos, text, speed]);
+
+  return (
+    <span aria-live="polite" className="inline-block">
+      <span>{text.slice(0, pos)}</span>
+      <span className="inline-block w-1 align-middle ml-1" aria-hidden style={{ opacity: visible ? 1 : 0 }}>
+        <span className="h-6 border-r-2 border-black" />
+      </span>
+    </span>
+  );
+}
+
+function InteractiveNeon() {
+  const ref = React.useRef<HTMLDivElement | null>(null);
+  const pulseRef = React.useRef<number | null>(null);
+
+  React.useEffect(() => {
+    return () => {
+      if (pulseRef.current) window.clearTimeout(pulseRef.current);
+    };
+  }, []);
+
+  const setVars = (el: HTMLElement | null, x = 0, y = 0, pulse = 0) => {
+    if (!el) return;
+    el.style.setProperty('--mx', String(x));
+    el.style.setProperty('--my', String(y));
+    el.style.setProperty('--pulse', String(pulse));
+  };
+
+  const onPointerMove: React.PointerEventHandler = (e) => {
+    const el = ref.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    const dx = (e.clientX - cx) / rect.width; // -0.5..0.5-ish
+    const dy = (e.clientY - cy) / rect.height;
+    // scale to nicer tilt
+    setVars(el, dx * 18, dy * -10, 0);
+  };
+
+  const onPointerLeave: React.PointerEventHandler = () => {
+    setVars(ref.current, 0, 0, 0);
+  };
+
+  const triggerPulse = () => {
+    const el = ref.current;
+    if (!el) return;
+    setVars(el, Number(getComputedStyle(el).getPropertyValue('--mx') || 0), Number(getComputedStyle(el).getPropertyValue('--my') || 0), 1);
+    if (pulseRef.current) window.clearTimeout(pulseRef.current);
+    pulseRef.current = window.setTimeout(() => setVars(el, 0, 0, 0), 420);
+  };
+
+  const onKeyDown: React.KeyboardEventHandler = (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      triggerPulse();
+    }
+  };
+
+  return (
+    <div
+      ref={ref}
+      role="button"
+      tabIndex={0}
+      onPointerMove={onPointerMove}
+      onPointerLeave={onPointerLeave}
+      onClick={triggerPulse}
+      onKeyDown={onKeyDown}
+      className="neon-shape-wrapper w-40 h-40 md:w-56 md:h-56 focus:ring-4 focus:ring-indigo-200/40 rounded-lg"
+      aria-pressed={false}
+      style={{ ['--mx' as any]: 0, ['--my' as any]: 0, ['--pulse' as any]: 0 }}
+    >
+      <div className="neon-shape interactive" aria-hidden />
+      <div className="neon-glow" aria-hidden />
+    </div>
+  );
+}
 
 interface LandingPageProps {
   onGetStarted: () => void;
 }
 
 export function LandingPage({ onGetStarted }: LandingPageProps) {
+  const [demoTags, setDemoTags] = React.useState<{ id: string; label: string; selected: boolean }[]>([
+    { id: 't1', label: 'cat', selected: false },
+    { id: 't2', label: 'outdoor', selected: false },
+    { id: 't3', label: 'sunny', selected: false },
+  ]);
+
+  const toggleDemoTag = (id: string) => {
+    setDemoTags((t) => t.map(tag => tag.id === id ? { ...tag, selected: !tag.selected } : tag));
+  };
+  // smooth scroll progress using requestAnimationFrame + lerp
+  React.useEffect(() => {
+    const target = { value: 0 };
+    const current = { value: 0 };
+    let rafId: number | null = null;
+
+    const getPct = () => {
+      const scrolled = window.scrollY || window.pageYOffset;
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      return docHeight > 0 ? (scrolled / docHeight) * 100 : 0;
+    };
+
+    const updateTarget = () => {
+      target.value = getPct();
+    };
+
+    const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+
+    const animate = () => {
+      current.value = lerp(current.value, target.value, 0.12);
+      const bar = document.getElementById('scroll-progress-bar');
+      if (bar) bar.style.width = current.value + '%';
+      rafId = requestAnimationFrame(animate);
+    };
+
+    updateTarget();
+    rafId = requestAnimationFrame(animate);
+    window.addEventListener('scroll', updateTarget, { passive: true });
+    window.addEventListener('resize', updateTarget);
+
+    return () => {
+      window.removeEventListener('scroll', updateTarget);
+      window.removeEventListener('resize', updateTarget);
+      if (rafId) cancelAnimationFrame(rafId);
+    };
+  }, []);
+
   return (
     <div className="min-h-screen bg-white text-black">
-      <nav className="border-b border-gray-200 bg-white/80 backdrop-blur-sm sticky top-0 z-50">
+      {/* Scroll progress bar */}
+      <div className="fixed top-0 left-0 right-0 h-1 z-50 bg-transparent">
+        <div id="scroll-progress-bar" className="h-1 bg-gradient-to-r from-violet-600 to-indigo-600 transition-all w-0" />
+      </div>
+      {/* Navbar */}
+      <nav className="border-b border-gray-200 bg-white sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-20">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-black flex items-center justify-center">
-                <Tag className="w-6 h-6 text-white" />
-              </div>
-              <span className="text-2xl font-bold tracking-tight">LabelIed</span>
+              <Logo size={36} />
+              <span className="text-lg font-bold">LabelIed</span>
             </div>
             <button
               onClick={onGetStarted}
-              className="px-8 py-3 bg-black text-white font-medium hover:bg-gray-800 transition-all hover:scale-105 active:scale-95"
+              className="px-4 py-2 bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-sm font-medium rounded-lg hover:opacity-90 transition-all hover:scale-105 active:scale-95 shadow-lg shadow-violet-600/20"
             >
               Get Started
             </button>
@@ -26,332 +170,253 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
         </div>
       </nav>
 
+      {/* Hero Section */}
       <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-gray-50 to-white"></div>
+        <div className="absolute inset-0 bg-white"></div>
+        <div className="absolute inset-0">
+          <div className="absolute inset-0 bg-white"></div>
+        </div>
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-32">
+          <style>{`
+            .neon-shape-wrapper { position: relative; display: inline-block; }
+            .neon-shape {
+              width: 100%; height: 100%;
+              border-radius: 40% 60% 50% 50% / 55% 45% 65% 35%;
+              background: radial-gradient(circle at 30% 20%, rgba(99,102,241,0.95), transparent 25%),
+                          linear-gradient(135deg, rgba(29,78,216,0.85), rgba(139,92,246,0.9) 60%);
+              transform: rotate3d(1, 1, 0, 20deg) translateZ(0);
+              filter: blur(0.25px) saturate(140%);
+              animation: morph 6s ease-in-out infinite, beat 2s ease-in-out infinite;
+              box-shadow: 0 8px 40px rgba(99,102,241,0.18), inset 0 -6px 24px rgba(99,102,241,0.08);
+              position: relative;
+            }
+
+            .neon-shape.interactive {
+              cursor: pointer;
+              transition: transform 220ms cubic-bezier(.2,.9,.2,1), box-shadow 220ms;
+              /* use CSS vars set by JS to tilt/translate and pulse */
+              transform: translate3d(calc(var(--mx, 0) * 1px), calc(var(--my, 0) * 1px), 0) rotate3d(1,1,0,20deg) scale(calc(1 + (var(--pulse, 0) * 0.06)));
+              will-change: transform;
+            }
+
+            .neon-glow {
+              position: absolute; inset: -8px; border-radius: inherit;
+              background: radial-gradient(circle at 30% 30%, rgba(99,102,241,0.22), transparent 20%),
+                          radial-gradient(circle at 70% 70%, rgba(99,102,241,0.16), transparent 25%);
+              filter: blur(12px);
+              pointer-events: none;
+              transform: scale(1.02);
+              animation: glowShift 8s ease-in-out infinite;
+            }
+
+            @keyframes morph {
+              0% { border-radius: 42% 58% 48% 52% / 52% 48% 62% 38%; transform: rotate3d(1,1,0,18deg) scale(1); }
+              25% { border-radius: 58% 42% 44% 56% / 45% 55% 38% 62%; transform: rotate3d(1,-1,0,16deg) scale(1.04); }
+              50% { border-radius: 50% 50% 60% 40% / 60% 40% 50% 50%; transform: rotate3d(-1,1,0,22deg) scale(0.98) translateY(-4px); }
+              75% { border-radius: 44% 56% 52% 48% / 48% 52% 58% 42%; transform: rotate3d(0.8,0.6,0,20deg) scale(1.03); }
+              100% { border-radius: 42% 58% 48% 52% / 52% 48% 62% 38%; transform: rotate3d(1,1,0,18deg) scale(1); }
+            }
+
+            @keyframes beat {
+              0%, 100% { box-shadow: 0 8px 40px rgba(99,102,241,0.18), inset 0 -6px 24px rgba(99,102,241,0.08); }
+              50% { box-shadow: 0 18px 60px rgba(99,102,241,0.26), inset 0 -10px 36px rgba(99,102,241,0.12); transform: scale(1.02); }
+            }
+
+            @keyframes glowShift {
+              0% { transform: translateY(0) scale(1.02); opacity: 1 }
+              50% { transform: translateY(-6px) scale(1.06); opacity: 0.85 }
+              100% { transform: translateY(0) scale(1.02); opacity: 1 }
+            }
+          `}</style>
           <div className="text-center">
-            <div className="inline-flex items-center space-x-2 px-4 py-2 bg-black text-white text-sm font-medium mb-8">
+            <div className="inline-flex items-center space-x-2 px-4 py-2 bg-black text-white text-sm font-medium mb-8 rounded-full">
               <Sparkles className="w-4 h-4" />
               <span>Simple Data Labeling for AI</span>
             </div>
-            <h1 className="text-6xl md:text-8xl font-bold mb-8 tracking-tight">
-              Label Data.
-              <br />
-              Train AI.
-              <br />
-              <span className="text-gray-400">Simple.</span>
-            </h1>
-            <p className="text-xl md:text-2xl text-gray-600 mb-12 max-w-3xl mx-auto leading-relaxed">
-              A beautifully simple tool that helps people label data for AI — especially beginners and students learning how artificial intelligence works.
+            <div className="flex items-center justify-center gap-8 flex-col md:flex-row">
+                  <h1 className="text-4xl md:text-6xl font-bold mb-4 tracking-tight md:whitespace-normal max-w-2xl">
+                <Typewriter text={"Turn messy data into reliable models — faster."} />
+              </h1>
+
+              {/* Neon morphing 3D-ish shape */}
+              <div className="mt-6 md:mt-0">
+                    <div className="ml-0 md:ml-4 lg:ml-8">
+                      <InteractiveNeon />
+                    </div>
+              </div>
+            </div>
+            <p className="text-lg md:text-xl text-gray-600 mb-8 max-w-2xl mx-auto leading-relaxed">
+              Label images and text with a simple, human-friendly interface. Ship clean datasets for training with less time and fewer mistakes.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
               <button
                 onClick={onGetStarted}
-                className="group inline-flex items-center space-x-3 px-10 py-5 bg-black text-white text-lg font-medium hover:bg-gray-800 transition-all hover:scale-105 active:scale-95"
+                className="group inline-flex items-center space-x-2 px-6 py-3 bg-black text-white text-sm font-medium rounded hover:opacity-95 transition-all"
               >
-                <span>Start Labeling Free</span>
-                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-              </button>
-              <button
-                onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })}
-                className="inline-flex items-center space-x-2 px-10 py-5 border-2 border-black text-black text-lg font-medium hover:bg-black hover:text-white transition-all"
-              >
-                <span>See How It Works</span>
+                Start Labeling
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </button>
             </div>
-            <p className="mt-8 text-sm text-gray-500">No credit card required • Free forever</p>
           </div>
         </div>
       </section>
 
-      <section className="border-t-2 border-gray-900">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="group hover:scale-105 transition-transform">
-              <div className="border-2 border-gray-900 p-8 bg-white h-full">
-                <div className="w-16 h-16 bg-black text-white flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                  <Database className="w-8 h-8" />
-                </div>
-                <h3 className="text-3xl font-bold mb-4">Upload</h3>
-                <p className="text-gray-600 leading-relaxed text-lg">
-                  Pick or upload your data — like pictures or text. Support for multiple file formats including images, text, CSV, and JSON.
-                </p>
+      {/* Features Section */}
+  <section className="py-24 bg-white border-t border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+            <div className="space-y-3 p-4 rounded-xl bg-white border border-gray-100">
+              <div className="w-10 h-10 bg-gray-100 flex items-center justify-center rounded-lg">
+                <Upload className="w-5 h-5 text-black" />
               </div>
-            </div>
-
-            <div className="group hover:scale-105 transition-transform">
-              <div className="border-2 border-gray-900 p-8 bg-white h-full">
-                <div className="w-16 h-16 bg-black text-white flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                  <Tag className="w-8 h-8" />
-                </div>
-                <h3 className="text-3xl font-bold mb-4">Label</h3>
-                <p className="text-gray-600 leading-relaxed text-lg">
-                  Add names, tags, or labels to show what each piece of data is. Simple, intuitive interface that anyone can use.
-                </p>
-              </div>
-            </div>
-
-            <div className="group hover:scale-105 transition-transform">
-              <div className="border-2 border-gray-900 p-8 bg-white h-full">
-                <div className="w-16 h-16 bg-black text-white flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                  <Download className="w-8 h-8" />
-                </div>
-                <h3 className="text-3xl font-bold mb-4">Download</h3>
-                <p className="text-gray-600 leading-relaxed text-lg">
-                  Download your labeled data in JSON format, ready to use for training AI projects or machine learning experiments.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section id="how-it-works" className="border-t-2 border-gray-900 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
-          <div className="text-center mb-20">
-            <h2 className="text-5xl md:text-6xl font-bold mb-6 tracking-tight">How It Works</h2>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              From upload to export in four simple steps. No complex setup, no technical barriers.
-            </p>
-          </div>
-
-          <div className="space-y-24">
-            <div className="grid md:grid-cols-2 gap-12 items-center">
-              <div className="order-2 md:order-1">
-                <div className="inline-flex items-center space-x-2 px-4 py-2 bg-black text-white text-sm font-bold mb-4">
-                  <span>STEP 1</span>
-                </div>
-                <h3 className="text-4xl font-bold mb-6">Create Your Project</h3>
-                <p className="text-gray-600 text-lg leading-relaxed mb-6">
-                  Start by creating a new project. Choose between image labeling or text labeling based on your data type. Give your project a name and optional description to keep things organized.
-                </p>
-                <ul className="space-y-4">
-                  <li className="flex items-start space-x-3">
-                    <CheckCircle2 className="w-6 h-6 flex-shrink-0 mt-1" />
-                    <span className="text-gray-700 text-lg">Select project type: Images or Text</span>
-                  </li>
-                  <li className="flex items-start space-x-3">
-                    <CheckCircle2 className="w-6 h-6 flex-shrink-0 mt-1" />
-                    <span className="text-gray-700 text-lg">Add a descriptive name and details</span>
-                  </li>
-                  <li className="flex items-start space-x-3">
-                    <CheckCircle2 className="w-6 h-6 flex-shrink-0 mt-1" />
-                    <span className="text-gray-700 text-lg">Create unlimited projects for different datasets</span>
-                  </li>
-                </ul>
-              </div>
-              <div className="order-1 md:order-2">
-                <div className="border-2 border-gray-900 bg-white p-12 aspect-square flex items-center justify-center">
-                  <div className="text-center">
-                    <div className="w-24 h-24 bg-black text-white flex items-center justify-center mx-auto mb-6">
-                      <Tag className="w-12 h-12" />
-                    </div>
-                    <div className="text-2xl font-bold mb-2">New Project</div>
-                    <div className="text-gray-500">Image or Text</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="grid md:grid-cols-2 gap-12 items-center">
-              <div>
-                <div className="border-2 border-gray-900 bg-white p-12 aspect-square flex items-center justify-center">
-                  <div className="text-center">
-                    <div className="w-24 h-24 bg-black text-white flex items-center justify-center mx-auto mb-6">
-                      <Upload className="w-12 h-12" />
-                    </div>
-                    <div className="text-2xl font-bold mb-2">Upload Files</div>
-                    <div className="text-gray-500">Drag & Drop</div>
-                  </div>
-                </div>
-              </div>
-              <div>
-                <div className="inline-flex items-center space-x-2 px-4 py-2 bg-black text-white text-sm font-bold mb-4">
-                  <span>STEP 2</span>
-                </div>
-                <h3 className="text-4xl font-bold mb-6">Upload Your Data</h3>
-                <p className="text-gray-600 text-lg leading-relaxed mb-6">
-                  Upload multiple files at once. For images, we support JPG, PNG, and other common formats. For text, upload TXT, CSV, or JSON files. Your data is stored securely.
-                </p>
-                <ul className="space-y-4">
-                  <li className="flex items-start space-x-3">
-                    <CheckCircle2 className="w-6 h-6 flex-shrink-0 mt-1" />
-                    <span className="text-gray-700 text-lg">Batch upload multiple files</span>
-                  </li>
-                  <li className="flex items-start space-x-3">
-                    <CheckCircle2 className="w-6 h-6 flex-shrink-0 mt-1" />
-                    <span className="text-gray-700 text-lg">Preview your data before labeling</span>
-                  </li>
-                  <li className="flex items-start space-x-3">
-                    <CheckCircle2 className="w-6 h-6 flex-shrink-0 mt-1" />
-                    <span className="text-gray-700 text-lg">Secure storage in the cloud</span>
-                  </li>
-                </ul>
-              </div>
-            </div>
-
-            <div className="grid md:grid-cols-2 gap-12 items-center">
-              <div className="order-2 md:order-1">
-                <div className="inline-flex items-center space-x-2 px-4 py-2 bg-black text-white text-sm font-bold mb-4">
-                  <span>STEP 3</span>
-                </div>
-                <h3 className="text-4xl font-bold mb-6">Label Your Data</h3>
-                <p className="text-gray-600 text-lg leading-relaxed mb-6">
-                  Navigate through your dataset one item at a time. Add multiple labels to each item. For example, label an image as "cat", "pet", "animal". Easy navigation with previous/next buttons.
-                </p>
-                <ul className="space-y-4">
-                  <li className="flex items-start space-x-3">
-                    <CheckCircle2 className="w-6 h-6 flex-shrink-0 mt-1" />
-                    <span className="text-gray-700 text-lg">Add multiple labels per item</span>
-                  </li>
-                  <li className="flex items-start space-x-3">
-                    <CheckCircle2 className="w-6 h-6 flex-shrink-0 mt-1" />
-                    <span className="text-gray-700 text-lg">Easy navigation through your dataset</span>
-                  </li>
-                  <li className="flex items-start space-x-3">
-                    <CheckCircle2 className="w-6 h-6 flex-shrink-0 mt-1" />
-                    <span className="text-gray-700 text-lg">Edit or delete labels anytime</span>
-                  </li>
-                </ul>
-              </div>
-              <div className="order-1 md:order-2">
-                <div className="border-2 border-gray-900 bg-white p-12 aspect-square flex items-center justify-center">
-                  <div className="w-full">
-                    <div className="bg-gray-100 h-32 mb-6 flex items-center justify-center">
-                      <div className="text-gray-400 text-sm">Image Preview</div>
-                    </div>
-                    <div className="space-y-2">
-                      <div className="border-2 border-gray-900 px-4 py-3 bg-gray-50">
-                        <span className="font-bold">cat</span>
-                      </div>
-                      <div className="border-2 border-gray-900 px-4 py-3 bg-gray-50">
-                        <span className="font-bold">pet</span>
-                      </div>
-                      <div className="border-2 border-gray-900 px-4 py-3 bg-gray-50">
-                        <span className="font-bold">animal</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="grid md:grid-cols-2 gap-12 items-center">
-              <div>
-                <div className="border-2 border-gray-900 bg-black text-white p-12 aspect-square flex items-center justify-center">
-                  <div className="text-center">
-                    <div className="w-24 h-24 border-2 border-white flex items-center justify-center mx-auto mb-6">
-                      <Download className="w-12 h-12" />
-                    </div>
-                    <div className="text-2xl font-bold mb-2">Export JSON</div>
-                    <div className="text-gray-400">Ready for AI Training</div>
-                  </div>
-                </div>
-              </div>
-              <div>
-                <div className="inline-flex items-center space-x-2 px-4 py-2 bg-black text-white text-sm font-bold mb-4">
-                  <span>STEP 4</span>
-                </div>
-                <h3 className="text-4xl font-bold mb-6">Export & Train</h3>
-                <p className="text-gray-600 text-lg leading-relaxed mb-6">
-                  When you're finished labeling, export your dataset as a JSON file. This format is ready to use with popular machine learning frameworks like TensorFlow, PyTorch, and scikit-learn.
-                </p>
-                <ul className="space-y-4">
-                  <li className="flex items-start space-x-3">
-                    <CheckCircle2 className="w-6 h-6 flex-shrink-0 mt-1" />
-                    <span className="text-gray-700 text-lg">Export in JSON format</span>
-                  </li>
-                  <li className="flex items-start space-x-3">
-                    <CheckCircle2 className="w-6 h-6 flex-shrink-0 mt-1" />
-                    <span className="text-gray-700 text-lg">Compatible with major ML frameworks</span>
-                  </li>
-                  <li className="flex items-start space-x-3">
-                    <CheckCircle2 className="w-6 h-6 flex-shrink-0 mt-1" />
-                    <span className="text-gray-700 text-lg">Download and use immediately</span>
-                  </li>
-                </ul>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="border-t-2 border-gray-900">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
-          <div className="grid md:grid-cols-2 gap-16 items-center">
-            <div>
-              <h2 className="text-5xl font-bold mb-8 tracking-tight">Built for Learning</h2>
-              <p className="text-gray-600 text-xl leading-relaxed mb-8">
-                LabelIed is designed with students and AI beginners in mind. No complex setup, no technical barriers — just a straightforward tool to help you understand how data labeling powers machine learning.
+              <h3 className="text-base font-semibold text-black">Upload Your Data</h3>
+              <p className="text-sm text-gray-600">
+                Upload your images or text data that needs labeling. Support for various file formats.
               </p>
-              <div className="space-y-6">
-                <div className="flex items-start space-x-4">
-                  <div className="w-12 h-12 bg-black text-white flex items-center justify-center flex-shrink-0">
-                    <Zap className="w-6 h-6" />
+            </div>
+
+            <div className="space-y-4 p-6 rounded-xl bg-white border border-gray-100">
+              <div className="w-12 h-12 bg-gray-100 flex items-center justify-center rounded-lg">
+                <Tag className="w-6 h-6 text-black" />
+              </div>
+              <h3 className="text-lg font-semibold text-black">Label with Ease</h3>
+              <p className="text-gray-600">
+                Simple and intuitive interface for labeling your data. Perfect for both beginners and experts.
+              </p>
+            </div>
+
+            <div className="space-y-4 p-6 rounded-xl bg-white border border-gray-100">
+              <div className="w-12 h-12 bg-gray-100 flex items-center justify-center rounded-lg">
+                <Download className="w-6 h-6 text-black" />
+              </div>
+              <h3 className="text-lg font-semibold text-black">Export & Use</h3>
+              <p className="text-gray-600">
+                Export your labeled data in various formats ready to be used in your AI models.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+  {/* Why Choose Us Section */}
+  <section className="py-24 bg-white border-t border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            <div>
+              <h2 className="text-3xl font-bold mb-4 text-black">Why Choose LabelIed?</h2>
+              <div className="space-y-4">
+                <div className="flex items-start space-x-3 p-3 rounded-lg bg-white border border-gray-100">
+                  <div className="flex-shrink-0">
+                    <CheckCircle2 className="w-5 h-5 text-black" />
                   </div>
                   <div>
-                    <h4 className="font-bold text-xl mb-2">Zero Learning Curve</h4>
-                    <p className="text-gray-600">Intuitive interface that anyone can use immediately</p>
+                    <h3 className="font-semibold mb-2 text-black">Simple & Intuitive</h3>
+                    <p className="text-gray-600">
+                      Designed with simplicity in mind. No complex setup or learning curve required.
+                    </p>
                   </div>
                 </div>
-                <div className="flex items-start space-x-4">
-                  <div className="w-12 h-12 bg-black text-white flex items-center justify-center flex-shrink-0">
-                    <Database className="w-6 h-6" />
+
+                <div className="flex items-start space-x-4 p-4 rounded-lg bg-white border border-gray-100">
+                  <div className="flex-shrink-0">
+                    <Database className="w-6 h-6 text-black" />
                   </div>
                   <div>
-                    <h4 className="font-bold text-xl mb-2">Multiple Data Types</h4>
-                    <p className="text-gray-600">Support for images and text data out of the box</p>
+                    <h3 className="font-semibold mb-2 text-black">Multiple Data Types</h3>
+                    <p className="text-gray-600">
+                      Support for both image and text data labeling. More formats coming soon.
+                    </p>
                   </div>
                 </div>
-                <div className="flex items-start space-x-4">
-                  <div className="w-12 h-12 bg-black text-white flex items-center justify-center flex-shrink-0">
-                    <Download className="w-6 h-6" />
+
+                <div className="flex items-start space-x-4 p-4 rounded-lg bg-white border border-gray-100">
+                  <div className="flex-shrink-0">
+                    <Zap className="w-6 h-6 text-black" />
                   </div>
                   <div>
-                    <h4 className="font-bold text-xl mb-2">AI-Ready Export</h4>
-                    <p className="text-gray-600">Export in formats ready for training machine learning models</p>
+                    <h3 className="font-semibold mb-2 text-black">Fast & Efficient</h3>
+                    <p className="text-gray-600">
+                      Optimized for speed and efficiency. Label more data in less time.
+                    </p>
                   </div>
                 </div>
               </div>
             </div>
-            <div className="bg-gradient-to-br from-gray-100 to-gray-200 aspect-square flex items-center justify-center border-2 border-gray-900">
-              <div className="text-center p-12">
-                <Tag className="w-32 h-32 mx-auto mb-6 text-gray-300" />
-                <p className="text-gray-500 text-lg font-medium">Intuitive Labeling Interface</p>
+
+            <div className="relative">
+              <div className="aspect-[4/3] rounded-2xl overflow-hidden shadow-xl shadow-violet-600/20 bg-white border border-gray-100">
+                {/* small animated demo */}
+                <style>{`
+                  @keyframes popIn { 0% { transform: translateY(8px) scale(.95); opacity:0 } 60% { opacity:1; transform: translateY(0) scale(1.04) } 100% { transform: translateY(0) scale(1); } }
+                  .demo-tag { opacity: 0; transform: translateY(8px) scale(.95); animation: popIn 560ms cubic-bezier(.2,.8,.2,1) forwards; }
+                `}</style>
+                <div className="relative h-full w-full bg-gradient-to-br from-gray-50 to-white flex items-center justify-center">
+                  <div className="w-10/12 h-4/5 bg-gradient-to-br from-violet-500 to-indigo-500 rounded-xl relative overflow-hidden">
+                    <div className="absolute inset-0 opacity-20 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-white via-transparent to-transparent"></div>
+                    {/* mock image area */}
+                    <div className="absolute left-4 top-4 w-32 h-20 bg-white/30 rounded-md" />
+                    {/* animated tags (interactive) */}
+                    <div className="absolute left-6 bottom-6 flex space-x-2">
+                      {demoTags.map((t, i) => (
+                        <button
+                          key={t.id}
+                          onClick={() => toggleDemoTag(t.id)}
+                          aria-pressed={t.selected}
+                          className={`demo-tag inline-flex items-center px-2.5 py-1 rounded-full text-xs shadow-sm transition-colors ${
+                            t.selected ? 'bg-white text-indigo-700' : 'bg-white/90 text-gray-900'
+                          }`}
+                          style={{ animationDelay: `${0.15 + i * 0.2}s` }}
+                        >
+                          {t.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                <div className="p-4">
+                  <h4 className="text-sm font-semibold mb-1">Try it — in seconds</h4>
+                  <p className="text-sm text-gray-600">Upload an image, click label chips to tag content, and export your labeled dataset as JSON. The demo above shows tags appearing as you label.</p>
+
+                  <div className="mt-3 bg-white/80 border border-gray-100 rounded-md p-3 text-xs text-gray-800">
+                    <div className="font-medium text-sm text-gray-900 mb-1">Selected labels (preview)</div>
+                    <pre className="max-h-28 overflow-auto text-[11px]">{JSON.stringify(demoTags.filter(d => d.selected).map(d => d.label), null, 2)}</pre>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      <section className="border-t-2 border-gray-900 bg-black text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-32 text-center">
-          <h2 className="text-5xl md:text-7xl font-bold mb-8 tracking-tight">
-            Ready to start labeling?
+      {/* CTA Section */}
+      <section className="py-32 bg-white border-t border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <h2 className="text-3xl md:text-5xl font-bold mb-6 tracking-tight">
+            Ready to Start Labeling?
           </h2>
-          <p className="text-gray-400 text-xl mb-12 max-w-2xl mx-auto leading-relaxed">
-            Create your free account and start building your first labeled dataset in minutes. No credit card required.
+          <p className="text-base text-gray-600 mb-8 max-w-xl mx-auto">
+            Create your free account and start building your first labeled dataset in minutes.
           </p>
           <button
             onClick={onGetStarted}
-            className="group inline-flex items-center space-x-3 px-10 py-5 bg-white text-black text-lg font-medium hover:bg-gray-200 transition-all hover:scale-105 active:scale-95"
+            className="group inline-flex items-center space-x-2 px-6 py-3 bg-black text-white text-sm font-medium rounded hover:opacity-95 transition-all"
           >
-            <span>Get Started Free</span>
+            Get Started Free
             <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
           </button>
+          <p className="mt-6 text-zinc-500">No credit card required • Free forever</p>
         </div>
       </section>
 
-      <footer className="border-t-2 border-gray-900 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      {/* Footer */}
+      <footer className="py-8 bg-white border-t border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
             <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-black flex items-center justify-center">
-                <Tag className="w-5 h-5 text-white" />
-              </div>
+              <Logo size={28} />
               <span className="text-xl font-bold">LabelIed</span>
             </div>
-            <p className="text-gray-600 font-medium">Data labeling made simple for everyone</p>
+            <p className="text-gray-600">Data labeling made simple for everyone</p>
           </div>
         </div>
       </footer>

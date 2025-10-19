@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Tag, ArrowLeft } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
+import Logo from './Logo';
 import { useAuth } from '../contexts/AuthContext';
 
 interface AuthPageProps {
@@ -42,19 +43,17 @@ export function AuthPage({ onBack }: AuthPageProps) {
   };
 
   return (
-    <div className="min-h-screen bg-white flex flex-col">
-      <nav className="border-b-2 border-gray-900">
+    <div className="min-h-screen bg-white text-black flex flex-col">
+      <nav className="border-b border-gray-200 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-20">
+          <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-black flex items-center justify-center">
-                <Tag className="w-6 h-6 text-white" />
-              </div>
-              <span className="text-2xl font-bold tracking-tight">LabelIed</span>
+              <Logo size={28} />
+              <span className="text-lg font-bold">LabelIed</span>
             </div>
             <button
               onClick={onBack}
-              className="flex items-center space-x-2 text-black hover:text-gray-600 transition-colors font-medium"
+              className="inline-flex items-center space-x-2 text-sm font-medium text-gray-600 hover:text-black transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />
               <span>Back</span>
@@ -65,29 +64,29 @@ export function AuthPage({ onBack }: AuthPageProps) {
 
       <div className="flex-1 flex items-center justify-center px-4 py-12">
         <div className="w-full max-w-md">
-          <div className="text-center mb-10">
-            <h1 className="text-5xl font-bold mb-4 tracking-tight">
+          <div className="text-center mb-8">
+            <h1 className="text-2xl font-bold mb-3 tracking-tight">
               {isLogin ? 'Welcome Back' : 'Create Account'}
             </h1>
-            <p className="text-gray-600 text-lg">
+            <p className="text-gray-600 text-sm">
               {isLogin
                 ? 'Sign in to continue labeling'
                 : 'Start labeling data for your AI projects'}
             </p>
           </div>
 
-          <div className="bg-gray-50 border-2 border-gray-900 p-10">
-            <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+            <form onSubmit={handleSubmit} className="space-y-4">
               {!isLogin && (
                 <div>
-                  <label className="block text-sm font-bold mb-3 uppercase tracking-wide">
+                  <label className="block text-sm font-medium mb-2 text-zinc-400">
                     Full Name
                   </label>
                   <input
                     type="text"
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
-                    className="w-full px-4 py-3 border-2 border-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900 transition-all bg-white"
+                    className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-black placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-black/10 transition-all"
                     placeholder="John Doe"
                     required={!isLogin}
                   />
@@ -95,36 +94,36 @@ export function AuthPage({ onBack }: AuthPageProps) {
               )}
 
               <div>
-                <label className="block text-sm font-bold mb-3 uppercase tracking-wide">
+                <label className="block text-sm font-medium mb-2 text-gray-600">
                   Email
                 </label>
                 <input
                   type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900 transition-all bg-white"
-                  placeholder="you@example.com"
-                  required
-                />
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-black placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-black/10 transition-all"
+                    placeholder="you@example.com"
+                    required
+                  />
               </div>
 
               <div>
-                <label className="block text-sm font-bold mb-3 uppercase tracking-wide">
+                <label className="block text-sm font-medium mb-2 text-gray-600">
                   Password
                 </label>
                 <input
                   type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900 transition-all bg-white"
-                  placeholder="••••••••"
-                  required
-                  minLength={6}
-                />
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-black placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-black/10 transition-all"
+                    placeholder="••••••••"
+                    required
+                    minLength={6}
+                  />
               </div>
 
               {error && (
-                <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-sm">
+                <div className="p-3 bg-red-50 border border-red-100 rounded-lg text-red-600 text-sm">
                   {error}
                 </div>
               )}
@@ -132,13 +131,13 @@ export function AuthPage({ onBack }: AuthPageProps) {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-4 bg-black text-white hover:bg-gray-800 transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-lg"
+                className="w-full py-2 px-4 bg-black text-white text-sm font-medium rounded hover:opacity-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? 'Loading...' : isLogin ? 'Sign In' : 'Create Account'}
               </button>
             </form>
 
-            <div className="mt-6 text-center">
+            <div className="mt-4 text-center">
               <button
                 onClick={() => {
                   setIsLogin(!isLogin);

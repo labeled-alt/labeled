@@ -17,35 +17,55 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    // Defensive: supabase may be a stub proxy when envs are not configured
+    if (!supabase || typeof (supabase as any).auth?.getSession !== 'function') {
+      setLoading(false);
+      return;
+    }
+
+    supabase.auth.getSession().then(({ data }: { data: { session: any } }) => {
+      const session = data?.session;
       setUser(session?.user ?? null);
       setLoading(false);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      (async () => {
-        setUser(session?.user ?? null);
-      })();
+    const { data: { subscription } }: any = supabase.auth.onAuthStateChange((_: string, session: any) => {
+      setUser(session?.user ?? null);
     });
 
-    return () => subscription.unsubscribe();
+    return () => subscription?.unsubscribe?.();
   }, []);
 
   const signUp = async (email: string, password: string, fullName: string) => {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-    });
-
-    if (data.user && !error) {
-      await supabase.from('profiles').insert({
-        id: data.user.id,
-        email: data.user.email!,
-        full_name: fullName,
+    try {
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
       });
-    }
 
-    return { error };
+      if (signUpError) {
+        console.error('Sign up error:', signUpError);
+        return { error: signUpError };
+      }
+
+      if (data.user) {
+        const { error: profileError } = await supabase.from('profiles').insert({
+          id: data.user.id,
+          email: data.user.email!,
+          full_name: fullName,
+        });
+
+        if (profileError) {
+          console.error('Profile creation error:', profileError);
+          return { error: profileError };
+        }
+      }
+
+      return { error: null };
+    } catch (error) {
+      console.error('Unexpected error:', error);
+      return { error };
+    }
   };
 
   const signIn = async (email: string, password: string) => {

@@ -14,6 +14,7 @@ export function LabelingInterface({ project, onBack }: LabelingInterfaceProps) {
   const [newLabel, setNewLabel] = useState('');
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   useEffect(() => {
     loadDatasets();
@@ -56,35 +57,71 @@ export function LabelingInterface({ project, onBack }: LabelingInterfaceProps) {
     if (!files || files.length === 0) return;
 
     setUploading(true);
+    setUploadError(null);
 
     for (const file of Array.from(files)) {
       if (project.type === 'image') {
-        const reader = new FileReader();
-        reader.onloadend = async () => {
-          const base64 = reader.result as string;
-          await supabase.from('datasets').insert({
-            project_id: project.id,
-            file_name: file.name,
-            file_url: base64,
-            file_type: file.type,
-          });
-        };
-        reader.readAsDataURL(file);
+        try {
+          // try upload to Supabase Storage bucket 'datasets'
+          const ext = file.name.split('.').pop();
+          const filePath = `${project.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+          const { error: uploadError } = await supabase.storage.from('datasets').upload(filePath, file, { cacheControl: '3600', upsert: false });
+          if (uploadError) {
+            console.warn('Storage upload failed, falling back to base64', uploadError);
+            const reader = new FileReader();
+            reader.onloadend = async () => {
+              const base64 = (reader.result as string) || '';
+              const safeBase64 = base64.replace(/\u0000/g, '');
+              const { error: insertError } = await supabase.from('datasets').insert({
+                project_id: project.id,
+                file_name: file.name,
+                file_url: safeBase64,
+                file_type: file.type,
+              });
+              if (insertError) {
+                console.error('Error inserting dataset (base64 fallback)', insertError);
+                setUploadError(insertError.message || JSON.stringify(insertError));
+              }
+            };
+            reader.readAsDataURL(file);
+          } else {
+            // get public URL
+            const { data: urlData } = supabase.storage.from('datasets').getPublicUrl(filePath);
+            const publicUrl = urlData.publicUrl;
+            const { error: insertError } = await supabase.from('datasets').insert({
+              project_id: project.id,
+              file_name: file.name,
+              file_url: publicUrl,
+              file_type: file.type,
+            });
+            if (insertError) {
+              console.error('Error inserting dataset (storage path)', insertError);
+              setUploadError(insertError.message || JSON.stringify(insertError));
+            }
+          }
+        } catch (err) {
+          console.error('Error uploading image', err);
+          setUploadError((err as Error).message || String(err));
+        }
       } else {
         const text = await file.text();
-        await supabase.from('datasets').insert({
+        const safeText = text.replace(/\u0000/g, '');
+        const { error: insertError } = await supabase.from('datasets').insert({
           project_id: project.id,
           file_name: file.name,
-          content: text,
+          content: safeText,
           file_type: file.type,
         });
+        if (insertError) {
+          console.error('Error inserting text dataset', insertError);
+          setUploadError(insertError.message || JSON.stringify(insertError));
+        }
       }
     }
 
-    setTimeout(() => {
-      loadDatasets();
-      setUploading(false);
-    }, 500);
+    // reload datasets after uploads complete
+    await loadDatasets();
+    setUploading(false);
   };
 
   const handleAddLabel = async (e: React.FormEvent) => {
@@ -177,6 +214,7 @@ export function LabelingInterface({ project, onBack }: LabelingInterfaceProps) {
                   disabled={uploading}
                 />
               </label>
+              {uploadError && <div className="text-sm text-red-500">{uploadError}</div>}
               <button
                 onClick={handleExport}
                 disabled={datasets.length === 0}
@@ -216,6 +254,7 @@ export function LabelingInterface({ project, onBack }: LabelingInterfaceProps) {
                 className="hidden"
               />
             </label>
+            {uploadError && <p className="text-sm text-red-500 mt-3">{uploadError}</p>}
           </div>
         ) : (
           <div className="grid lg:grid-cols-2 gap-8">
