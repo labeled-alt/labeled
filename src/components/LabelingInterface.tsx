@@ -67,7 +67,8 @@ export function LabelingInterface({ project, onBack }: LabelingInterfaceProps) {
           const filePath = `${project.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
           const { error: uploadError } = await supabase.storage.from('datasets').upload(filePath, file, { cacheControl: '3600', upsert: false });
           if (uploadError) {
-            console.warn('Storage upload failed, falling back to base64', uploadError);
+            console.error('Storage upload failed, falling back to base64', uploadError);
+            setUploadError(`Storage upload failed: ${uploadError.message || JSON.stringify(uploadError)}`);
             const reader = new FileReader();
             reader.onloadend = async () => {
               const base64 = (reader.result as string) || '';
@@ -87,7 +88,11 @@ export function LabelingInterface({ project, onBack }: LabelingInterfaceProps) {
           } else {
             // get public URL
             const { data: urlData } = supabase.storage.from('datasets').getPublicUrl(filePath);
-            const publicUrl = urlData.publicUrl;
+            const publicUrl = urlData?.publicUrl;
+            if (!publicUrl) {
+              console.error('getPublicUrl returned no url for', filePath, urlData);
+              setUploadError('Failed to get public URL for uploaded file');
+            }
             const { error: insertError } = await supabase.from('datasets').insert({
               project_id: project.id,
               file_name: file.name,
@@ -104,18 +109,75 @@ export function LabelingInterface({ project, onBack }: LabelingInterfaceProps) {
           setUploadError((err as Error).message || String(err));
         }
       } else {
-        const text = await file.text();
-        const safeText = text.replace(/\u0000/g, '');
-        const { error: insertError } = await supabase.from('datasets').insert({
-          project_id: project.id,
-          file_name: file.name,
-          content: safeText,
-          file_type: file.type,
-        });
-        if (insertError) {
-          console.error('Error inserting text dataset', insertError);
-          setUploadError(insertError.message || JSON.stringify(insertError));
+        // Ensure we only accept text files for text projects
+        const ext = (file.name.split('.').pop() || '').toLowerCase();
+        const isProbablyText = file.type.startsWith('text/') || ['txt', 'csv', 'json', 'md'].includes(ext);
+
+        if (isProbablyText) {
+          const text = await file.text();
+          const safeText = text.replace(/\u0000/g, '');
+          const { error: insertError } = await supabase.from('datasets').insert({
+            project_id: project.id,
+            file_name: file.name,
+            content: safeText,
+            file_type: file.type,
+          });
+          if (insertError) {
+            console.error('Error inserting text dataset', insertError);
+            setUploadError(insertError.message || JSON.stringify(insertError));
+          }
+        } else if (file.type.startsWith('image/')) {
+          // If uploading an image into a text project, store a URL instead of binary text
+          try {
+            const ext2 = file.name.split('.').pop();
+            const filePath = `${project.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext2}`;
+            const { error: uploadErr } = await supabase.storage.from('datasets').upload(filePath, file, { cacheControl: '3600', upsert: false });
+            if (!uploadErr) {
+              const { data: urlData } = supabase.storage.from('datasets').getPublicUrl(filePath);
+              const publicUrl = urlData?.publicUrl;
+              if (!publicUrl) {
+                console.error('getPublicUrl returned no url for', filePath, urlData);
+                setUploadError('Failed to get public URL for uploaded file');
+              }
+              const { error: insertError } = await supabase.from('datasets').insert({
+                project_id: project.id,
+                file_name: file.name,
+                file_url: publicUrl,
+                file_type: file.type,
+              });
+              if (insertError) {
+                console.error('Error inserting dataset (storage path for image in text project)', insertError);
+                setUploadError(insertError.message || JSON.stringify(insertError));
+              }
+            } else {
+              // fallback to base64 stored in file_url
+              const reader = new FileReader();
+              reader.onloadend = async () => {
+                const base64 = (reader.result as string) || '';
+                const safeBase64 = base64.replace(/\u0000/g, '');
+                const { error: insertError } = await supabase.from('datasets').insert({
+                  project_id: project.id,
+                  file_name: file.name,
+                  file_url: safeBase64,
+                  file_type: file.type,
+                });
+                if (insertError) {
+                  console.error('Error inserting dataset (base64 fallback for image in text project)', insertError);
+                  setUploadError(insertError.message || JSON.stringify(insertError));
+                }
+              };
+              reader.readAsDataURL(file);
+            }
+          } catch (err) {
+            console.error('Error handling image for text project', err);
+            setUploadError((err as Error).message || String(err));
+          }
+        } else {
+          console.warn('Skipping unsupported non-text/non-image file for text project:', file.name, file.type);
+          setUploadError(`Skipped ${file.name}: unsupported file type.`);
+          continue;
         }
+        
       }
     }
 

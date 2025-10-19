@@ -100,15 +100,13 @@ interface LandingPageProps {
 }
 
 export function LandingPage({ onGetStarted }: LandingPageProps) {
-  const [demoTags, setDemoTags] = React.useState<{ id: string; label: string; selected: boolean }[]>([
+  const demoTags: { id: string; label: string; selected: boolean }[] = [
     { id: 't1', label: 'cat', selected: false },
     { id: 't2', label: 'outdoor', selected: false },
     { id: 't3', label: 'sunny', selected: false },
-  ]);
+  ];
 
-  const toggleDemoTag = (id: string) => {
-    setDemoTags((t) => t.map(tag => tag.id === id ? { ...tag, selected: !tag.selected } : tag));
-  };
+  
   // smooth scroll progress using requestAnimationFrame + lerp
   React.useEffect(() => {
     const target = { value: 0 };
@@ -298,46 +296,113 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
         </div>
       </section>
 
+      {/* How it works Section */}
+      <section className="py-20 bg-white border-t border-gray-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold">How it works</h2>
+            <p className="text-gray-600 max-w-2xl mx-auto mt-3">Simple steps to go from raw data to labeled datasets.</p>
+          </div>
+
+          <div className="relative flex items-center justify-center gap-6 flex-col md:flex-row">
+            <div className="flex flex-col items-center text-center max-w-xs p-6 rounded-xl border border-gray-100">
+              <div className="w-12 h-12 flex items-center justify-center rounded-full bg-gradient-to-br from-violet-600 to-indigo-600 text-white mb-3 shadow-md">
+                <Upload className="w-5 h-5" />
+              </div>
+              <h3 className="font-semibold mb-1">Upload</h3>
+              <p className="text-sm text-gray-600">Add images or text files to a project. We store them safely and prepare them for labeling.</p>
+            </div>
+
+            {/* Arrow */}
+            <div className="hidden md:flex items-center justify-center">
+              <svg width="96" height="48" viewBox="0 0 96 48" fill="none" xmlns="http://www.w3.org/2000/svg" className="mx-4">
+                <defs>
+                  <linearGradient id="g1" x1="0" x2="1">
+                    <stop offset="0%" stopColor="#8b5cf6" />
+                    <stop offset="100%" stopColor="#06b6d4" />
+                  </linearGradient>
+                </defs>
+                <path d="M4 24h72" stroke="url(#g1)" strokeWidth="3" strokeLinecap="round" strokeDasharray="6 6" />
+                <path d="M76 16l12 8-12 8" fill="url(#g1)" />
+              </svg>
+            </div>
+
+            <div className="flex flex-col items-center text-center max-w-xs p-6 rounded-xl border border-gray-100">
+              <div className="w-12 h-12 flex items-center justify-center rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 text-white mb-3 shadow-md">
+                <Tag className="w-5 h-5" />
+              </div>
+              <h3 className="font-semibold mb-1">Label</h3>
+              <p className="text-sm text-gray-600">Click chips or create custom labels and tag your data with a human-friendly interface.</p>
+            </div>
+
+            {/* Arrow */}
+            <div className="hidden md:flex items-center justify-center">
+              <svg width="96" height="48" viewBox="0 0 96 48" fill="none" xmlns="http://www.w3.org/2000/svg" className="mx-4">
+                <defs>
+                  <linearGradient id="g2" x1="0" x2="1">
+                    <stop offset="0%" stopColor="#06b6d4" />
+                    <stop offset="100%" stopColor="#8b5cf6" />
+                  </linearGradient>
+                </defs>
+                <path d="M4 24h72" stroke="url(#g2)" strokeWidth="3" strokeLinecap="round" strokeDasharray="6 6" />
+                <path d="M76 16l12 8-12 8" fill="url(#g2)" />
+              </svg>
+            </div>
+
+            <div className="flex flex-col items-center text-center max-w-xs p-6 rounded-xl border border-gray-100">
+              <div className="w-12 h-12 flex items-center justify-center rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 text-white mb-3 shadow-md">
+                <Download className="w-5 h-5" />
+              </div>
+              <h3 className="font-semibold mb-1">Export</h3>
+              <p className="text-sm text-gray-600">Download your labeled dataset as JSON to train models or share with your team.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
   {/* Why Choose Us Section */}
   <section className="py-24 bg-white border-t border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div>
               <h2 className="text-3xl font-bold mb-4 text-black">Why Choose LabelIed?</h2>
-              <div className="space-y-4">
-                <div className="flex items-start space-x-3 p-3 rounded-lg bg-white border border-gray-100">
-                  <div className="flex-shrink-0">
-                    <CheckCircle2 className="w-5 h-5 text-black" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold mb-2 text-black">Simple & Intuitive</h3>
-                    <p className="text-gray-600">
-                      Designed with simplicity in mind. No complex setup or learning curve required.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-start space-x-4 p-4 rounded-lg bg-white border border-gray-100">
-                  <div className="flex-shrink-0">
-                    <Database className="w-6 h-6 text-black" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold mb-2 text-black">Multiple Data Types</h3>
-                    <p className="text-gray-600">
-                      Support for both image and text data labeling. More formats coming soon.
-                    </p>
+                <div className="space-y-4">
+                <div className="group relative overflow-hidden p-4 rounded-xl border border-gray-100 bg-white hover:shadow-xl transition-shadow hover:-translate-y-1">
+                  <div className="absolute inset-y-0 left-0 w-1 bg-gradient-to-b from-violet-500 to-indigo-500 rounded-r-md" />
+                  <div className="relative flex items-start space-x-3">
+                    <div className="flex-shrink-0 z-10">
+                      <CheckCircle2 className="w-5 h-5 text-violet-600" />
+                    </div>
+                    <div className="z-10">
+                      <h3 className="font-semibold mb-1">Design-first labeling</h3>
+                      <p className="text-gray-600 text-sm">A beautiful, human-first interface that gets your team labeling in minutes — no training required.</p>
+                    </div>
                   </div>
                 </div>
 
-                <div className="flex items-start space-x-4 p-4 rounded-lg bg-white border border-gray-100">
-                  <div className="flex-shrink-0">
-                    <Zap className="w-6 h-6 text-black" />
+                <div className="group relative overflow-hidden p-4 rounded-xl border border-gray-100 bg-white hover:shadow-xl transition-shadow hover:-translate-y-1">
+                  <div className="absolute inset-y-0 left-0 w-1 bg-gradient-to-b from-emerald-400 to-emerald-600 rounded-r-md" />
+                  <div className="relative flex items-start space-x-3">
+                    <div className="flex-shrink-0 z-10">
+                      <Database className="w-6 h-6 text-emerald-500" />
+                    </div>
+                    <div className="z-10">
+                      <h3 className="font-semibold mb-1">Unified data platform</h3>
+                      <p className="text-gray-600 text-sm">Images, text, and mixed datasets — one workspace to manage everything with consistent tooling and exports.</p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="font-semibold mb-2 text-black">Fast & Efficient</h3>
-                    <p className="text-gray-600">
-                      Optimized for speed and efficiency. Label more data in less time.
-                    </p>
+                </div>
+
+                <div className="group relative overflow-hidden p-4 rounded-xl border border-gray-100 bg-white hover:shadow-xl transition-shadow hover:-translate-y-1">
+                  <div className="absolute inset-y-0 left-0 w-1 bg-gradient-to-b from-yellow-400 to-orange-500 rounded-r-md" />
+                  <div className="relative flex items-start space-x-3">
+                    <div className="flex-shrink-0 z-10">
+                      <Zap className="w-6 h-6 text-orange-500" />
+                    </div>
+                    <div className="z-10">
+                      <h3 className="font-semibold mb-1">Built for speed & scale</h3>
+                      <p className="text-gray-600 text-sm">Keyboard shortcuts, bulk tools, and fast exports so you can label more data, faster — without sacrificing quality.</p>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -351,25 +416,47 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
                   .demo-tag { opacity: 0; transform: translateY(8px) scale(.95); animation: popIn 560ms cubic-bezier(.2,.8,.2,1) forwards; }
                 `}</style>
                 <div className="relative h-full w-full bg-gradient-to-br from-gray-50 to-white flex items-center justify-center">
-                  <div className="w-10/12 h-4/5 bg-gradient-to-br from-violet-500 to-indigo-500 rounded-xl relative overflow-hidden">
-                    <div className="absolute inset-0 opacity-20 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-white via-transparent to-transparent"></div>
-                    {/* mock image area */}
-                    <div className="absolute left-4 top-4 w-32 h-20 bg-white/30 rounded-md" />
-                    {/* animated tags (interactive) */}
-                    <div className="absolute left-6 bottom-6 flex space-x-2">
-                      {demoTags.map((t, i) => (
-                        <button
-                          key={t.id}
-                          onClick={() => toggleDemoTag(t.id)}
-                          aria-pressed={t.selected}
-                          className={`demo-tag inline-flex items-center px-2.5 py-1 rounded-full text-xs shadow-sm transition-colors ${
-                            t.selected ? 'bg-white text-indigo-700' : 'bg-white/90 text-gray-900'
-                          }`}
-                          style={{ animationDelay: `${0.15 + i * 0.2}s` }}
-                        >
-                          {t.label}
-                        </button>
-                      ))}
+                  <div className="w-10/12 h-4/5 rounded-xl relative overflow-hidden flex items-center justify-center">
+                    <style>{`
+                      .phone-mock { width: 10.5rem; height: 16rem; border-radius: 1.25rem; box-shadow: 0 18px 40px rgba(99,102,241,0.18); transform: translateZ(0); }
+                      .phone-screen { background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02)); height: 100%; overflow: hidden; position: relative; }
+                      .abstract-art { width:100%; height:100%; display:block; }
+                      .chip-anim { position: absolute; left: 50%; transform: translateX(-50%); bottom: 18px; display:flex; gap:0.5rem; }
+                      .chip { padding: 0.35rem 0.6rem; border-radius:999px; background: rgba(255,255,255,0.9); color:#0f172a; font-size:0.65rem; font-weight:600; box-shadow: 0 6px 18px rgba(99,102,241,0.12); transform-origin: center; animation: pop 700ms var(--d) cubic-bezier(.2,.9,.2,1) forwards; }
+                      @keyframes pop { 0% { transform: translateY(10px) scale(.95); opacity:0 } 60% { transform: translateY(-6px) scale(1.06); opacity:1 } 100% { transform: translateY(0) scale(1); opacity:1 } }
+                      .phone-frame { padding: 0.6rem; background: linear-gradient(180deg,#6d28d9,#4f46e5); border-radius: 1.5rem; }
+                      .glow-ring { position:absolute; inset:auto 6% 10% 6%; height:30%; border-radius:12px; filter: blur(22px); background: radial-gradient(circle at 30% 20%, rgba(99,102,241,0.24), transparent 20%), radial-gradient(circle at 80% 80%, rgba(59,130,246,0.12), transparent 30%); }
+                    `}</style>
+
+                    <div className="relative phone-frame flex items-center justify-center phone-mock">
+                      <div className="glow-ring" aria-hidden />
+                      <div className="phone-screen rounded-xl overflow-hidden" role="img" aria-label="Demo mockup">
+                        {/* abstract svg art as placeholder */}
+                        <svg className="abstract-art" viewBox="0 0 400 700" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
+                          <defs>
+                            <linearGradient id="a" x1="0" x2="1">
+                              <stop offset="0%" stopColor="#7c3aed"/>
+                              <stop offset="100%" stopColor="#06b6d4"/>
+                            </linearGradient>
+                          </defs>
+                          <rect width="100%" height="100%" fill="url(#a)"/>
+                          <g opacity="0.12">
+                            <circle cx="80" cy="120" r="80" fill="#fff" />
+                            <circle cx="320" cy="200" r="120" fill="#fff" />
+                          </g>
+                          <g transform="translate(40,160)">
+                            <rect x="0" y="0" rx="12" ry="12" width="320" height="220" fill="rgba(255,255,255,0.12)"/>
+                            <rect x="12" y="12" rx="8" ry="8" width="296" height="80" fill="rgba(255,255,255,0.18)"/>
+                            <rect x="12" y="104" rx="8" ry="8" width="220" height="90" fill="rgba(255,255,255,0.10)"/>
+                          </g>
+                        </svg>
+
+                        <div className="chip-anim" aria-hidden>
+                          <div className="chip" style={{ ['--d' as any]: '0.12s' }}>car</div>
+                          <div className="chip" style={{ ['--d' as any]: '0.22s' }}>outdoor</div>
+                          <div className="chip" style={{ ['--d' as any]: '0.32s' }}>sunny</div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
